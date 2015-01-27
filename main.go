@@ -7,6 +7,7 @@ import (
 	"github.com/mitchellh/goamz/s3"
 	"io/ioutil"
 	"net/http"
+	"os"
 )
 
 func handle(err error) {
@@ -18,11 +19,12 @@ func handle(err error) {
 func main() {
 	fmt.Println("Serving on port 8080")
 	http.HandleFunc("/", uploadHandler)
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":"+os.Getenv("PORT"), nil)
 
 }
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(r)
 	switch r.Method {
 	case "POST":
 		parseApplicationID := "TfJHzuJVZYU97rJc02JrJ8jy8JtsDNe1tbqACmJh"
@@ -51,7 +53,6 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 
 		testS3(username)
 
-		// display(w, "upload", "Upload successful.")
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
