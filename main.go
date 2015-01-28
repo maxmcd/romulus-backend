@@ -32,34 +32,26 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		reader, err := r.MultipartReader()
 		handle(err)
 
-		form, err := reader.ReadForm(9000)
+		form, err := reader.ReadForm(20000000) //20mb max allocated memory
 		handle(err)
-		fmt.Println(form.Value["bucket"][0])
 
-		// for {
-		// 	part, err := reader.NextPart()
-		// 	if err == io.EOF {
-		// 		break
-		// 	}
-		// 	fmt.Println(part.FileName())
-		// 	part.Read(d)
+		// keys := [5]string{"bucket", "body", "key", "contentType", "sessionToken"}
 
-		// 	//if part.FileName() is empty, skip this iteration.
-		// 	// part.FileName() == "" {
-		// 	//     continue
-		// 	// }
+		body, err := form.File["body"][0].Open()
+		handle(err)
+		contents, err := ioutil.ReadAll(body)
+		handle(err)
 
-		// 	// if _, err := io.Copy(dst, part); err != nil {
-		// 	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-		// 	// 	return
-		// 	// }
-		// }
-		// fmt.Println(string(reader))
-		username := getParseUsernameFromSession("5a7FLdW20cjmUFV64Nijbf0yG")
+		key := form.Value["key"][0]
+		contentType := form.Value["contentType"][0]
+		sessionToken := form.Value["sessionToken"][0]
+
+		username := getParseUsernameFromSession(sessionToken)
 		// this should probably return an error
+
 		if username != "" {
 			fmt.Println(username)
-			testS3(username)
+			uploadS3File(username, contents, contentType, key)
 			w.WriteHeader(http.StatusOK)
 		} else {
 			w.WriteHeader(http.StatusForbidden)
@@ -100,13 +92,13 @@ func getParseUsernameFromSession(session string) (username string) {
 
 }
 
-func testS3(username string) {
+func uploadS3File(username string, contents []byte, fileType string, key string) {
 	// grabs auth values from env variables
 	auth, err := aws.EnvAuth()
 	handle(err)
 	client := s3.New(auth, aws.USEast)
 	bucket := client.Bucket("romulus-host")
-	err = bucket.Put(username+"/test.hi", []byte("content"), "text/html", s3.PublicRead)
+	err = bucket.Put(username+"/"+key, contents, fileType, s3.PublicRead)
 	handle(err)
 	fmt.Println(err)
 }
